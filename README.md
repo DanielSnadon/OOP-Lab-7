@@ -4,4 +4,4 @@
 ### Вариант: 19
 
 #### Текст задания:
-<img src="https://github.com/DanielSnadon/OOP-Lab-6/blob/main/1.png" width="100%">
+<img src="https://github.com/DanielSnadon/OOP-Lab-7/blob/main/1.png" width="100%">
