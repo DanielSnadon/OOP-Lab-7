@@ -1,20 +1,28 @@
 #include "battleManager.h"
 
-set_t fight(const set_t &array, size_t distance)
+std::queue<BattleTask> battleTasks;
+std::mutex battleTasksMutex;
+
+void completeBattle(const BattleTask& task)
 {
-    set_t dead_list;
+    auto attacker = task.attacker;
+    auto defender = task.defender;
 
-    for (const auto &attacker : array) {
-        for (const auto &defender : array) {
-            if ((attacker != defender) && (dead_list.find(defender) == dead_list.end()) && (attacker->is_close(defender, distance))) {
-                bool success = defender->accept(attacker);
-
-                if (success) {
-                    dead_list.insert(defender);
-                }
-            }
-        }
+    if (!attacker->is_alive() || !defender->is_alive()) {
+        return;
     }
 
-    return dead_list;
+    if (defender->accept(attacker)) {
+        int attack = attacker->roll_dice();
+        int defense = defender->roll_dice();
+
+        bool success = (attack > defense);
+
+        if (success) {
+            defender->die();
+            attacker->fight_notify(defender, true);
+        } else {
+            attacker->fight_notify(defender, false);
+        }
+    }
 }

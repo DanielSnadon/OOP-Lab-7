@@ -1,0 +1,1 @@
+/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/main.dir/link.d CMakeFiles/main.dir/main.cpp.o CMakeFiles/main.dir/npc.cpp.o CMakeFiles/main.dir/bear.cpp.o CMakeFiles/main.dir/vip.cpp.o CMakeFiles/main.dir/vihuhol.cpp.o CMakeFiles/main.dir/battleManager.cpp.o -o main

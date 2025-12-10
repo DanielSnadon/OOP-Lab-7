@@ -1,0 +1,5 @@
+/home/snadon/OOP-Lab-7/build/CMakeFiles/main.dir
+/home/snadon/OOP-Lab-7/build/CMakeFiles/tests.dir
+/home/snadon/OOP-Lab-7/build/CMakeFiles/test.dir
+/home/snadon/OOP-Lab-7/build/CMakeFiles/edit_cache.dir
+/home/snadon/OOP-Lab-7/build/CMakeFiles/rebuild_cache.dir

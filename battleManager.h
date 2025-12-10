@@ -1,3 +1,12 @@
 #include "npc.h"
+#include <queue>
 
-set_t fight(const set_t &array, size_t distance);
+struct BattleTask {
+    std::shared_ptr<NPC> attacker;
+    std::shared_ptr<NPC> defender;
+};
+
+extern std::queue<BattleTask> battleTasks;
+extern std::mutex battleTasksMutex;
+
+void completeBattle(const BattleTask& task);

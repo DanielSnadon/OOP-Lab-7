@@ -2,8 +2,14 @@
 #include "vip.h"
 #include "vihuhol.h"
 
-Vihuhol::Vihuhol(int x, int y) : NPC(VihuholType, x, y) {}
-Vihuhol::Vihuhol(std::istream &is) : NPC(VihuholType, is) {}
+Vihuhol::Vihuhol(int x, int y) : NPC(VihuholType, x, y) {
+    speed = 5;
+    killRange = 20;
+}
+Vihuhol::Vihuhol(std::istream &is) : NPC(VihuholType, is) {
+    speed = 5;
+    killRange = 20;
+}
 
 void Vihuhol::print()
 {
@@ -41,6 +47,6 @@ bool Vihuhol::fight(std::shared_ptr<Vihuhol> other)
 
 std::ostream &operator<<(std::ostream &os, Vihuhol &vihuhol)
 {
-    os << "Выхухоль: " << *static_cast<NPC *>(&vihuhol) << std::endl;
+    os << "Выхухоль: " << *static_cast<NPC *>(&vihuhol);
     return os;
 }

@@ -3,8 +3,12 @@
 #include "vip.h"
 #include "vihuhol.h"
 #include "battleManager.h"
-
+#include <atomic>
 #include <ctime>
+#include <thread>
+
+using namespace std::chrono_literals;
+std::atomic<bool> stopFlag = false;
 
 class TextObserver : public IFightObserver
 {
@@ -14,7 +18,12 @@ public:
         if (win) {
             std::cout << std::endl;
             attacker->print();
-            std::cout << " --> ";
+            std::cout << " 🗡️-->💀 ";
+            defender->print();
+        } else {
+            std::cout << std::endl;
+            attacker->print();
+            std::cout << " 🗡️-->🛡️ ";
             defender->print();
         }
     }
@@ -127,6 +136,118 @@ set_t load(const std::string &fileName)
     return result;
 }
 
+// NEW ПОТОКИ
+
+void moveThread(set_t &npcs)
+{
+    while (!stopFlag) {
+        {
+            std::shared_lock<std::shared_mutex> lock(npcMutex);
+
+            for (const auto &attacker : npcs) {
+                if (attacker->is_alive()) {
+
+                    attacker->move(npcs);
+
+                    for (const auto &defender : npcs) {
+                        if (attacker.get() != defender.get() && defender->is_alive() && attacker->is_close(defender)) {
+                            std::lock_guard<std::mutex> tasks_lock(battleTasksMutex);
+                            battleTasks.push({attacker, defender});
+                        }
+                    }
+                }
+            }
+        }
+        
+        std::this_thread::sleep_for(1000ms);
+    }
+}
+
+void battleThread()
+{
+    while (!stopFlag) {
+        BattleTask currentTask;
+        bool taskFound = false;
+
+        {
+            std::lock_guard<std::mutex> tasks_lock(battleTasksMutex);
+
+            if (!battleTasks.empty()) {
+                currentTask = battleTasks.front();
+                battleTasks.pop();
+                taskFound = true;
+            }
+        }
+
+        if (taskFound) {
+            completeBattle(currentTask);
+        } else {
+            std::this_thread::sleep_for(10ms);
+        }
+    }
+}
+
+void printThread(set_t &npcs)
+{
+    const int grid{20};
+    const int stepX{(int)MAP_SIZE / grid};
+    const int stepY{(int)MAP_SIZE / grid};
+    std::array<char, grid * grid> fields;
+
+    while (!stopFlag) {
+        std::shared_lock<std::shared_mutex> lock_npc(npcMutex);
+
+        fields.fill(' ');
+
+        for (const std::shared_ptr<NPC> &npc : npcs)
+        {
+            if (npc->is_alive())
+            {
+                const auto [x, y] = npc->position();
+                int i = x / stepX;
+                int j = y / stepY;
+
+                if (i >= 0 && i < grid && j >= 0 && j < grid) {
+                    char c = '_';
+                    switch (npc->get_type())
+                    {
+                        case BearType:
+                            c = 'B';
+                            break;
+                        case VipType:
+                            c = 'V';
+                            break;
+                        case VihuholType:
+                            c = 'X';
+                            break;
+                        default:
+                            break;
+                    }
+                    fields[i + grid * j] = c;
+                }
+            }
+        }
+
+        lock_npc.unlock();
+
+        {
+            std::lock_guard<std::mutex> lock_cout(coutMutex);
+
+            std::cout << "\n         Игровое поле        \n";
+            for (int j = 0; j < grid; ++j) {
+                for (int i = 0; i < grid; ++i) {
+                    char c = fields[i + j * grid];
+                    std::cout << "[" << c << "]";
+                }
+                std::cout << std::endl;
+            }
+            
+        }
+        
+        std::this_thread::sleep_for(1000ms);
+    }
+}
+
 std::ostream &operator<<(std::ostream &os, const set_t &array)
 {
     for (auto &n : array) {
@@ -138,35 +259,54 @@ std::ostream &operator<<(std::ostream &os, const set_t &array)
 int main()
 {
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
-    set_t array;
+    set_t npcs;
+    auto observer = std::make_shared<TextObserver>();
 
-    std::cout << "Генерация NPC..." << std::endl;
-    for (size_t i = 0; i < 50; ++i) {
-        int type = std::rand() % 3 + 1;
-        int x = std::rand() % 501;
-        int y = std::rand() % 501;
-        array.insert(factory(NpcType(type), x, y));
-    }
+    {
+        std::lock_guard<std::shared_mutex> lock(npcMutex);
+        std::cout << "Генерация NPC..." << std::endl;
+        for (size_t i = 0; i < NPC_COUNT; ++i) {
+            int type = rand() % 3 + 1;
 
-    std::cout << "Сохранение..." << std::endl;
-    save(array, "npc.txt");
+            int x = std::rand() % (MAP_SIZE + 1);
+            int y = std::rand() % (MAP_SIZE + 1);
 
-    array.clear();
-
-    std::cout << "Загрузка..." << std::endl;
-    array = load("npc.txt");
-
-    std::cout << "Запуск симуляции сражения..." << std::endl;
-    for (size_t distance = 20; (distance < 500) && !array.empty(); distance += 10) {
-        
-        auto dead_list = fight(array, distance);
-        for (auto &d : dead_list) {
-            array.erase(d);
+            auto npc = factory(NpcType(type), x, y);
+            if (npc) {
+                npc->subscribe(observer);
+                npcs.insert(npc);
+            }
         }
-        std::cout << "Статистика раунда (Дистанция: " << distance << ")" << std::endl
-                  << "Убито: " << dead_list.size() << std::endl
-                  << std::endl;
     }
 
-    std::cout << "Финальный список выживших:" << array;
+    std::cout << "Начало симуляции..." << std::endl;
+    std::thread moveThr(moveThread, std::ref(npcs));
+    std::thread battleThr(battleThread);
+    std::thread printThr(printThread, std::ref(npcs));
+
+    std::this_thread::sleep_for(std::chrono::seconds(GAME_LENGTH));
+
+    stopFlag = true;
+
+    if (moveThr.joinable()) {
+        moveThr.join();
+    }
+    if (battleThr.joinable()) {
+        battleThr.join();
+    }
+    if (printThr.joinable()) {
+        printThr.join();
+    }
+
+    std::cout << "Симуляция завершена. Список выживших:\n" << std::endl;
+
+    std::shared_lock<std::shared_mutex> lock(npcMutex);
+    for (const auto &npc : npcs) {
+        if (npc->is_alive()) {
+            std::cout << std::endl;
+            npc->print();
+        }
+    }
+
+    return 0;
 }

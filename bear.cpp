@@ -2,8 +2,14 @@
 #include "vip.h"
 #include "vihuhol.h"
 
-Bear::Bear(int x, int y) : NPC(BearType, x, y) {}
-Bear::Bear(std::istream &is) : NPC(BearType, is) {}
+Bear::Bear(int x, int y) : NPC(BearType, x, y) {
+    speed = 5;
+    killRange = 10;
+}
+Bear::Bear(std::istream &is) : NPC(BearType, is) {
+    speed = 5;
+    killRange = 10;
+}
 
 void Bear::print()
 {
@@ -41,6 +47,6 @@ bool Bear::fight(std::shared_ptr<Vihuhol> other)
 
 std::ostream &operator<<(std::ostream &os, Bear &bear)
 {
-    os << "Медведь: " << *static_cast<NPC *>(&bear) << std::endl;
+    os << "Медведь: " << *static_cast<NPC *>(&bear);
     return os;
 }
