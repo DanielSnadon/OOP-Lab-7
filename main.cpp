@@ -141,7 +141,7 @@ int main()
     set_t array;
 
     std::cout << "Генерация NPC..." << std::endl;
-    for (size_t i = 0; i < 100; ++i) {
+    for (size_t i = 0; i < 50; ++i) {
         int type = std::rand() % 3 + 1;
         int x = std::rand() % 501;
         int y = std::rand() % 501;
