@@ -273,7 +273,6 @@ int main()
 
             auto npc = factory(NpcType(type), x, y);
             if (npc) {
-                npc->subscribe(observer);
                 npcs.insert(npc);
             }
         }
@@ -298,7 +297,7 @@ int main()
         printThr.join();
     }
 
-    std::cout << "Симуляция завершена. Список выживших:\n" << std::endl;
+    std::cout << "\n\nСимуляция завершена. Список выживших:\n" << std::endl;
 
     std::shared_lock<std::shared_mutex> lock(npcMutex);
     for (const auto &npc : npcs) {
@@ -307,6 +306,8 @@ int main()
             npc->print();
         }
     }
+
+    std::cout << std::endl;
 
     return 0;
 }
